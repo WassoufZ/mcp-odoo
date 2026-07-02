@@ -6,10 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - XML-RPC transport: create the `ServerProxy` clients with `allow_none=True` so a
-  call whose payload or `fields_get` metadata contains `None` no longer raises
-  `TypeError: cannot marshal None unless allow_none is enabled` (seen when creating
-  a `product.pricelist` through `validate_write`). Odoo's XML-RPC server already
-  emits `<nil/>`, so the client must accept it too.
+  call whose payload contains `None` no longer raises
+  `TypeError: cannot marshal None unless allow_none is enabled` client-side.
+  Odoo's XML-RPC server already emits `<nil/>`, so the client must accept it too.
+- `get_model_fields` now requests a bounded, marshal-safe `attributes` list
+  instead of a full `fields_get`. On Odoo 19, a full `fields_get` faults
+  **server-side** for models whose `domain` attribute is `None` (e.g.
+  `product.pricelist`) — Odoo's own XML-RPC layer refuses to marshal it, which no
+  client flag can fix. The bounded list covers every attribute the server
+  consumes (`string`, `help`, `type`, `required`, `readonly`, `relation`,
+  `selection`, `store`, `searchable`); an absent attribute reads as `None` via
+  `.get()`, exactly as before. Together these two fixes unblock `validate_write`
+  on such models (e.g. creating an IQD `product.pricelist`).
 
 ## [1.0.0] - 2026-06-11
 
